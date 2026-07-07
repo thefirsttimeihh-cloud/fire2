@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>スマホ対応・クリック爆発サイト</title>
+    <style>
+        /* 画面を真っ黒にする設定 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none; /* iOS向けのテキスト選択無効化 */
+            
+            /* 📱 スマホ特有の画面引っ張り（スクロール）やダブルタップズームを完全に禁止 */
+            touch-action: none; 
+            -webkit-overflow-scrolling: none;
+        }
+
+        /* 爆発動画のスタイル */
+        .explosion-video {
+            position: absolute;
+            pointer-events: none; /* 動画自体へのタッチを無視 */
+            transform: translate(-50%, -50%); /* タッチした位置が動画の中心になるように調整 */
+            
+            /* 📱 スマホの画面幅に合わせてサイズを調整（横幅の90%の大きさに設定） */
+            width: 90vw; 
+            max-width: 1000px; /* パソコンで開いた時に大きくなりすぎないストッパー */
+            height: auto;
+            
+            /* 黒背景の動画を透過させ、炎だけを画面に馴染ませる設定 */
+            mix-blend-mode: screen; 
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        // スマホの「タッチ開始」およびPCの「クリック」両方に対応するイベント
+        window.addEventListener('pointerdown', (e) => {
+            // マウスの左クリック、またはスマホの指タッチのみに反応させる
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+            // 1. ビデオ要素を新しく作成
+            const video = document.createElement('video');
+            video.src = 'fire.mp4';
+            video.classList.add('explosion-video');
+            
+            // 📱 スマホで勝手に全画面プレイヤーが起動するのを絶対に防ぐ設定
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+            video.playsInline = true;
+
+            // 2. タッチ／クリックされた座標（X, Y）の場所に動画の中心を配置
+            video.style.left = `${e.clientX}px`;
+            video.style.top = `${e.clientY}px`;
+
+            // 3. 画面（body）に動画を追加
+            document.body.appendChild(video);
+
+            // 4. 動画を再生
+            video.play().catch(error => {
+                // スマホのブラウザ制限で音が弾かれた場合は、ミュートにして動画だけは確実に再生させる
+                video.muted = true;
+                video.play();
+            });
+
+            // 5. 再生が終わったら自動的に要素を削除
+            video.addEventListener('ended', () => {
+                video.remove();
+            });
+
+            // セーフティ：5秒後に強制削除
+            setTimeout(() => {
+                if (video.parentNode) {
+                    video.remove();
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
