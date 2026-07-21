@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>スマホ対応・クリック爆発サイト（フルスクリーン版）</title>
+    <title>スマホ対応・クリック＆放置爆発サイト</title>
     <style>
         /* 画面を真っ黒にする設定 */
         body {
@@ -15,7 +15,7 @@
             height: 100vh;
             cursor: pointer;
             user-select: none;
-            -webkit-user-select: none; /* iOS向けのテキスト選択無効化 */
+            -webkit-user-select: none;
             
             /* 📱 スマホ特有の画面引っ張り（スクロール）やダブルタップズームを完全に禁止 */
             touch-action: none; 
@@ -28,9 +28,9 @@
             pointer-events: none; /* 動画自体へのタッチを無視 */
             transform: translate(-50%, -50%); /* タッチした位置が動画の中心になるように調整 */
             
-            /* 📱 スマホの画面幅に合わせてサイズを調整（横幅の90%の大きさに設定） */
+            /* 📱 スマホの画面幅に合わせてサイズを調整 */
             width: 90vw; 
-            max-width: 1000px; /* パソコンで開いた時に大きくなりすぎないストッパー */
+            max-width: 1000px; 
             height: auto;
             
             /* 黒背景の動画を透過させ、炎だけを画面に馴染ませる設定 */
@@ -41,63 +41,100 @@
 <body>
 
     <script>
-        // フルスクリーン化するための関数
+        // ======= フルスクリーン化の処理 =======
         function enterFullscreen() {
             const doc = document.documentElement;
-            // すでにフルスクリーン状態でなければ実行
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 if (doc.requestFullscreen) {
                     doc.requestFullscreen().catch(err => console.log(err));
-                } else if (doc.webkitRequestFullscreen) { /* Safari対応 */
+                } else if (doc.webkitRequestFullscreen) {
                     doc.webkitRequestFullscreen();
                 }
             }
         }
 
-        // スマホの「タッチ開始」およびPCの「クリック」両方に対応するイベント
-        window.addEventListener('pointerdown', (e) => {
-            // マウスの左クリック、またはスマホの指タッチのみに反応させる
-            if (e.button !== 0 && e.pointerType === 'mouse') return;
-
-            // ユーザーのアクション（タップ/クリック）を検知してフルスクリーン化
-            enterFullscreen();
-
-            // 1. ビデオ要素を新しく作成
+        // ======= 指定した座標（X, Y）で爆発させる関数 =======
+        function createExplosion(x, y) {
             const video = document.createElement('video');
             video.src = 'fire.mp4';
             video.classList.add('explosion-video');
             
-            // 📱 スマホで勝手に全画面プレイヤーが起動するのを絶対に防ぐ設定
             video.setAttribute('playsinline', '');
             video.setAttribute('webkit-playsinline', '');
             video.playsInline = true;
 
-            // 2. タッチ／クリックされた座標（X, Y）の場所に動画の中心を配置
-            video.style.left = `${e.clientX}px`;
-            video.style.top = `${e.clientY}px`;
+            video.style.left = `${x}px`;
+            video.style.top = `${y}px`;
 
-            // 3. 画面（body）に動画を追加
             document.body.appendChild(video);
 
-            // 4. 動画を再生
             video.play().catch(error => {
-                // スマホのブラウザ制限で音が弾かれた場合は、ミュートにして動画だけは確実に再生させる
                 video.muted = true;
                 video.play();
             });
 
-            // 5. 再生が終わったら自動的に要素を削除
             video.addEventListener('ended', () => {
                 video.remove();
             });
 
-            // セーフティ：5秒後に強制削除
             setTimeout(() => {
                 if (video.parentNode) {
                     video.remove();
                 }
             }, 5000);
+        }
+
+        // ======= 放置（3秒）検知と自動生成の処理 =======
+        let idleTimer = null;
+        let autoSpawnTimer = null;
+
+        // ランダムな場所で爆発を生成し続ける関数（上限無制限）
+        function startAutoSpawn() {
+            const randomX = Math.random() * window.innerWidth;
+            const randomY = Math.random() * window.innerHeight;
+            
+            // 件数制限なしで常に生成
+            createExplosion(randomX, randomY);
+
+            // 0.4秒〜1.2秒のランダムな間隔で次の爆発を予約
+            const nextTime = Math.random() * 800 + 400;
+            autoSpawnTimer = setTimeout(startAutoSpawn, nextTime);
+        }
+
+        // 放置タイマーをリセットする関数
+        function resetIdleTimer() {
+            // 自動生成が動いていれば止める
+            clearTimeout(autoSpawnTimer);
+            
+            // 既存の3秒タイマーをリセット
+            clearTimeout(idleTimer);
+            
+            // 新しく3秒後に自動生成を開始するタイマーをセット
+            idleTimer = setTimeout(() => {
+                startAutoSpawn();
+            }, 3000);
+        }
+
+
+        // ======= ユーザーの操作を検知するイベント =======
+        
+        // 1. タップ・クリックされた時
+        window.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+            enterFullscreen(); // フルスクリーン化
+            createExplosion(e.clientX, e.clientY); // 押した場所で爆発
+            resetIdleTimer(); // 放置タイマーをリセット
         });
+
+        // 2. マウスや指を動かした時（動かしている間は放置と判定しない）
+        window.addEventListener('pointermove', () => {
+            resetIdleTimer();
+        });
+
+        // ページ読み込み時に最初のタイマーをスタート（最初から3秒放置で発動）
+        resetIdleTimer();
+
     </script>
 </body>
 </html>
