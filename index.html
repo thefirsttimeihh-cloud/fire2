@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>スマホ対応・クリック爆発サイト</title>
+    <title>スマホ対応・クリック爆発サイト（フルスクリーン版）</title>
     <style>
         /* 画面を真っ黒にする設定 */
         body {
@@ -41,10 +41,26 @@
 <body>
 
     <script>
+        // フルスクリーン化するための関数
+        function enterFullscreen() {
+            const doc = document.documentElement;
+            // すでにフルスクリーン状態でなければ実行
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (doc.requestFullscreen) {
+                    doc.requestFullscreen().catch(err => console.log(err));
+                } else if (doc.webkitRequestFullscreen) { /* Safari対応 */
+                    doc.webkitRequestFullscreen();
+                }
+            }
+        }
+
         // スマホの「タッチ開始」およびPCの「クリック」両方に対応するイベント
         window.addEventListener('pointerdown', (e) => {
             // マウスの左クリック、またはスマホの指タッチのみに反応させる
             if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+            // ユーザーのアクション（タップ/クリック）を検知してフルスクリーン化
+            enterFullscreen();
 
             // 1. ビデオ要素を新しく作成
             const video = document.createElement('video');
